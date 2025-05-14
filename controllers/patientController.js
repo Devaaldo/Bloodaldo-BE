@@ -3,6 +3,21 @@ const { pool } = require("../config/db");
 const { analyzeBloodData } = require("../utils/expertSystem");
 
 /**
+ * Fungsi untuk menyimpan diagnosisData dengan benar
+ * @param {Object} analysisResult - Hasil analisis data darah
+ * @returns {string|Object} - Data JSON yang siap disimpan ke database
+ */
+const prepareDiagnosisData = (analysisResult) => {
+	// Jika database mengharapkan string JSON
+	if (process.env.DB_SAVE_JSON_AS_STRING === "true") {
+		return JSON.stringify(analysisResult);
+	}
+
+	// Jika database mendukung tipe data JSON natif (MySQL 5.7.8+)
+	return analysisResult;
+};
+
+/**
  * Mendapatkan semua data pasien
  * @route GET /api/patients
  * @access Private
@@ -84,7 +99,9 @@ const createPatient = async (req, res, next) => {
 		// Analisis data darah menggunakan sistem pakar
 		const analysisResult = analyzeBloodData(patientData);
 
-		// Simpan data pasien ke database
+		// Simpan data pasien ke database dengan diagnosisData yang sudah diproses
+		const diagnosisData = prepareDiagnosisData(analysisResult);
+
 		const [result] = await pool.query(
 			`
       INSERT INTO patients (
@@ -114,7 +131,7 @@ const createPatient = async (req, res, next) => {
 				patientData.eosinophils || null,
 				patientData.basophils || null,
 				analysisResult.diagnosis,
-				JSON.stringify(analysisResult),
+				diagnosisData,
 			]
 		);
 
@@ -175,6 +192,9 @@ const updatePatient = async (req, res, next) => {
 		// Analisis data darah menggunakan sistem pakar
 		const analysisResult = analyzeBloodData(patientData);
 
+		// Siapkan diagnosisData untuk penyimpanan
+		const diagnosisData = prepareDiagnosisData(analysisResult);
+
 		// Update data pasien
 		await pool.query(
 			`
@@ -219,7 +239,7 @@ const updatePatient = async (req, res, next) => {
 				patientData.eosinophils || null,
 				patientData.basophils || null,
 				analysisResult.diagnosis,
-				JSON.stringify(analysisResult),
+				diagnosisData,
 				id,
 			]
 		);
@@ -269,6 +289,7 @@ const deletePatient = async (req, res, next) => {
 	}
 };
 
+// Export semua fungsi controller
 module.exports = {
 	getAllPatients,
 	getPatientById,

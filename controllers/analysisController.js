@@ -24,8 +24,25 @@ const getAnalysisByPatientId = async (req, res, next) => {
 			});
 		}
 
-		// Parse data diagnosa dari JSON
-		const diagnosisData = JSON.parse(patients[0].diagnosisData);
+		// Parse data diagnosa dari JSON jika perlu
+		let diagnosisData;
+		try {
+			// Periksa apakah diagnosisData adalah string atau sudah berbentuk objek
+			const rawData = patients[0].diagnosisData;
+
+			if (typeof rawData === "string") {
+				diagnosisData = JSON.parse(rawData);
+			} else {
+				// Jika sudah berbentuk objek, gunakan langsung
+				diagnosisData = rawData;
+			}
+		} catch (error) {
+			console.error("Error parsing diagnosis data:", error);
+			return res.status(500).json({
+				success: false,
+				message: "Format data diagnosa tidak valid",
+			});
+		}
 
 		res.json({
 			success: true,

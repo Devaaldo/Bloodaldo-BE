@@ -1,31 +1,35 @@
 // routes/patientRoutes.js - Route untuk pasien
 const express = require("express");
 const router = express.Router();
-const {
-	getAllPatients,
-	getPatientById,
-	createPatient,
-	updatePatient,
-	deletePatient,
-} = require("../controllers/patientController");
+const patientController = require("../controllers/patientController");
 const {
 	authenticateToken,
 	adminOnly,
 } = require("../middlewares/authMiddleware");
 
 // Route publik untuk membuat pasien baru (form pasien)
-router.post("/", createPatient);
+router.post("/", patientController.createPatient);
 
 // Route publik untuk mendapatkan data pasien berdasarkan ID
-router.get("/:id", getPatientById);
+router.get("/:id", patientController.getPatientById);
 
 // Route terproteksi untuk mendapatkan semua data pasien
-router.get("/", getAllPatients);
+router.get("/", patientController.getAllPatients);
 
 // Route terproteksi untuk update data pasien (admin only)
-router.put("/:id", authenticateToken, adminOnly, updatePatient);
+router.put(
+	"/:id",
+	authenticateToken,
+	adminOnly,
+	patientController.updatePatient
+);
 
 // Route terproteksi untuk hapus data pasien (admin only)
-router.delete("/:id", authenticateToken, adminOnly, deletePatient);
+router.delete(
+	"/:id",
+	authenticateToken,
+	adminOnly,
+	patientController.deletePatient
+);
 
 module.exports = router;
