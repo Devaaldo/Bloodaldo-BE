@@ -1,4 +1,4 @@
-// controllers/patientController.js - Controller untuk data pasien
+// controllers/patientController.js - Perbaikan fungsi prepareDiagnosisData
 const { pool } = require("../config/db");
 const { analyzeBloodData } = require("../utils/expertSystem");
 
@@ -8,63 +8,9 @@ const { analyzeBloodData } = require("../utils/expertSystem");
  * @returns {string|Object} - Data JSON yang siap disimpan ke database
  */
 const prepareDiagnosisData = (analysisResult) => {
-	// Jika database mengharapkan string JSON
-	if (process.env.DB_SAVE_JSON_AS_STRING === "true") {
-		return JSON.stringify(analysisResult);
-	}
-
-	// Jika database mendukung tipe data JSON natif (MySQL 5.7.8+)
-	return analysisResult;
-};
-
-/**
- * Mendapatkan semua data pasien
- * @route GET /api/patients
- * @access Private
- */
-const getAllPatients = async (req, res, next) => {
-	try {
-		const [rows] = await pool.query(
-			"SELECT * FROM patients ORDER BY createdAt DESC"
-		);
-
-		res.json({
-			success: true,
-			count: rows.length,
-			data: rows,
-		});
-	} catch (error) {
-		next(error);
-	}
-};
-
-/**
- * Mendapatkan data pasien berdasarkan ID
- * @route GET /api/patients/:id
- * @access Private
- */
-const getPatientById = async (req, res, next) => {
-	try {
-		const { id } = req.params;
-
-		const [rows] = await pool.query("SELECT * FROM patients WHERE id = ?", [
-			id,
-		]);
-
-		if (rows.length === 0) {
-			return res.status(404).json({
-				success: false,
-				message: "Pasien tidak ditemukan",
-			});
-		}
-
-		res.json({
-			success: true,
-			data: rows[0],
-		});
-	} catch (error) {
-		next(error);
-	}
+	// MySQL versi terbaru menerima objek JSON langsung, tapi kita akan ubah ke string
+	// untuk keamanan dan konsistensi di berbagai versi MySQL
+	return JSON.stringify(analysisResult);
 };
 
 /**
@@ -99,8 +45,11 @@ const createPatient = async (req, res, next) => {
 		// Analisis data darah menggunakan sistem pakar
 		const analysisResult = analyzeBloodData(patientData);
 
-		// Simpan data pasien ke database dengan diagnosisData yang sudah diproses
+		// Simpan data pasien ke database dengan diagnosisData sebagai string JSON
 		const diagnosisData = prepareDiagnosisData(analysisResult);
+
+		// Log untuk debugging (opsional)
+		console.log("Diagnosis Data:", diagnosisData);
 
 		const [result] = await pool.query(
 			`
@@ -131,7 +80,7 @@ const createPatient = async (req, res, next) => {
 				patientData.eosinophils || null,
 				patientData.basophils || null,
 				analysisResult.diagnosis,
-				diagnosisData,
+				diagnosisData, // Sekarang sudah dalam bentuk string JSON
 			]
 		);
 
@@ -147,9 +96,7 @@ const createPatient = async (req, res, next) => {
 };
 
 /**
- * Mengupdate data pasien
- * @route PUT /api/patients/:id
- * @access Private
+ * Mengupdate data pasien (perbaikan juga untuk fungsi ini)
  */
 const updatePatient = async (req, res, next) => {
 	try {
@@ -255,11 +202,47 @@ const updatePatient = async (req, res, next) => {
 	}
 };
 
-/**
- * Menghapus data pasien
- * @route DELETE /api/patients/:id
- * @access Private
- */
+// Fungsi lainnya tetap sama
+const getAllPatients = async (req, res, next) => {
+	try {
+		const [rows] = await pool.query(
+			"SELECT * FROM patients ORDER BY createdAt DESC"
+		);
+
+		res.json({
+			success: true,
+			count: rows.length,
+			data: rows,
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+const getPatientById = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+
+		const [rows] = await pool.query("SELECT * FROM patients WHERE id = ?", [
+			id,
+		]);
+
+		if (rows.length === 0) {
+			return res.status(404).json({
+				success: false,
+				message: "Pasien tidak ditemukan",
+			});
+		}
+
+		res.json({
+			success: true,
+			data: rows[0],
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
 const deletePatient = async (req, res, next) => {
 	try {
 		const { id } = req.params;

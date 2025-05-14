@@ -1,4 +1,4 @@
-// config/db.js - Konfigurasi database MySQL
+// config/db.js - Konfigurasi database MySQL dengan perbaikan tipe data kolom diagnosisData
 const mysql = require("mysql2/promise");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
@@ -37,7 +37,9 @@ const initDb = async () => {
 	try {
 		const connection = await pool.getConnection();
 
-		// Membuat tabel patients
+		console.log("Creating database tables if they do not exist...");
+
+		// Membuat tabel patients dengan diagnosisData sebagai TEXT
 		await connection.query(`
       CREATE TABLE IF NOT EXISTS patients (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -59,7 +61,7 @@ const initDb = async () => {
         eosinophils FLOAT,
         basophils FLOAT,
         diagnosis VARCHAR(255),
-        diagnosisData JSON,
+        diagnosisData TEXT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -93,6 +95,35 @@ const initDb = async () => {
 			console.log(
 				"Default admin user created (username: admin, password: admin123)"
 			);
+		}
+
+		// Verifikasi tipe data kolom diagnosisData
+		try {
+			const [columns] = await connection.query(
+				`
+        SELECT COLUMN_NAME, DATA_TYPE 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'patients' AND COLUMN_NAME = 'diagnosisData'
+      `,
+				[dbConfig.database]
+			);
+
+			if (columns.length > 0) {
+				const dataType = columns[0].DATA_TYPE.toLowerCase();
+				console.log(`Column 'diagnosisData' has data type: ${dataType}`);
+
+				// Jika tipe data bukan TEXT atau JSON, ubah tipe data
+				if (dataType !== "text" && dataType !== "json") {
+					console.log("Altering column diagnosisData to TEXT type...");
+					await connection.query(`
+            ALTER TABLE patients 
+            MODIFY COLUMN diagnosisData TEXT
+          `);
+					console.log("Column diagnosisData altered successfully");
+				}
+			}
+		} catch (error) {
+			console.error("Error checking column data type:", error);
 		}
 
 		connection.release();
