@@ -1,100 +1,162 @@
+// controllers/authController.js - Controller untuk autentikasi
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const pool = require("../config/db");
-const { JWT_SECRET, JWT_EXPIRES_IN } = require("../config/auth");
+const { pool } = require("../config/db");
+const { generateToken } = require("../config/auth");
 
-// Register a new user
-exports.register = async (req, res) => {
-	const { name, email, password } = req.body;
-
+/**
+ * Login untuk admin
+ * @route POST /api/auth/login
+ * @access Public
+ */
+const login = async (req, res, next) => {
 	try {
-		// Check if email already exists
-		const [existingUsers] = await pool.query(
-			"SELECT * FROM users WHERE email = ?",
-			[email]
-		);
+		const { username, password } = req.body;
 
-		if (existingUsers.length > 0) {
-			return res.status(400).json({ message: "Email already in use" });
+		// Validasi input
+		if (!username || !password) {
+			return res.status(400).json({
+				success: false,
+				message: "Username dan password harus diisi",
+			});
 		}
 
-		// Hash password
-		const salt = await bcrypt.genSalt(10);
-		const hashedPassword = await bcrypt.hash(password, salt);
-
-		// Insert new user
-		const [result] = await pool.query(
-			"INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-			[name, email, hashedPassword]
-		);
-
-		// Get the created user (without password)
+		// Cari user di database
 		const [users] = await pool.query(
-			"SELECT id, name, email, role FROM users WHERE id = ?",
-			[result.insertId]
+			"SELECT * FROM admin_users WHERE username = ?",
+			[username]
 		);
+
+		if (users.length === 0) {
+			return res.status(401).json({
+				success: false,
+				message: "Username atau password salah",
+			});
+		}
 
 		const user = users[0];
 
-		// Create JWT token
-		const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-			expiresIn: JWT_EXPIRES_IN,
-		});
+		// Verifikasi password
+		const isPasswordValid = await bcrypt.compare(password, user.password);
 
-		res.status(201).json({
-			message: "User registered successfully",
-			user,
+		if (!isPasswordValid) {
+			return res.status(401).json({
+				success: false,
+				message: "Username atau password salah",
+			});
+		}
+
+		// Generate token JWT
+		const token = generateToken(user.id, user.username);
+
+		// Kirim response
+		res.json({
+			success: true,
 			token,
+			user: {
+				id: user.id,
+				username: user.username,
+				fullName: user.fullName,
+			},
 		});
-	} catch (err) {
-		console.error("Registration error:", err);
-		res.status(500).json({ message: "Server error during registration" });
+	} catch (error) {
+		next(error);
 	}
 };
 
-// Login user
-exports.login = async (req, res) => {
-	const { email, password } = req.body;
-
+/**
+ * Verifikasi token
+ * @route GET /api/auth/verify
+ * @access Private
+ */
+const verifyUser = async (req, res, next) => {
 	try {
-		// Check if user exists
-		const [users] = await pool.query("SELECT * FROM users WHERE email = ?", [
-			email,
+		// req.user didapatkan dari middleware authenticateToken
+		res.json({
+			success: true,
+			valid: true,
+			user: {
+				id: req.user.id,
+				username: req.user.username,
+			},
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Mengubah password admin
+ * @route PUT /api/auth/change-password
+ * @access Private
+ */
+const changePassword = async (req, res, next) => {
+	try {
+		const { currentPassword, newPassword } = req.body;
+		const userId = req.user.id;
+
+		// Validasi input
+		if (!currentPassword || !newPassword) {
+			return res.status(400).json({
+				success: false,
+				message: "Password lama dan baru harus diisi",
+			});
+		}
+
+		if (newPassword.length < 6) {
+			return res.status(400).json({
+				success: false,
+				message: "Password baru harus minimal 6 karakter",
+			});
+		}
+
+		// Cari user di database
+		const [users] = await pool.query("SELECT * FROM admin_users WHERE id = ?", [
+			userId,
 		]);
 
 		if (users.length === 0) {
-			return res.status(400).json({ message: "Invalid credentials" });
+			return res.status(404).json({
+				success: false,
+				message: "User tidak ditemukan",
+			});
 		}
 
 		const user = users[0];
 
-		// Verify password
-		const isMatch = await bcrypt.compare(password, user.password);
+		// Verifikasi password lama
+		const isPasswordValid = await bcrypt.compare(
+			currentPassword,
+			user.password
+		);
 
-		if (!isMatch) {
-			return res.status(400).json({ message: "Invalid credentials" });
+		if (!isPasswordValid) {
+			return res.status(401).json({
+				success: false,
+				message: "Password lama tidak valid",
+			});
 		}
 
-		// Create JWT token
-		const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-			expiresIn: JWT_EXPIRES_IN,
-		});
+		// Hash password baru
+		const salt = await bcrypt.genSalt(10);
+		const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-		// Return user without password
-		const { password: _, ...userWithoutPassword } = user;
+		// Update password di database
+		await pool.query("UPDATE admin_users SET password = ? WHERE id = ?", [
+			hashedPassword,
+			userId,
+		]);
 
 		res.json({
-			message: "Login successful",
-			user: userWithoutPassword,
-			token,
+			success: true,
+			message: "Password berhasil diubah",
 		});
-	} catch (err) {
-		console.error("Login error:", err);
-		res.status(500).json({ message: "Server error during login" });
+	} catch (error) {
+		next(error);
 	}
 };
 
-// Get current user
-exports.getCurrentUser = async (req, res) => {
-	res.json({ user: req.user });
+module.exports = {
+	login,
+	verifyUser,
+	changePassword,
 };

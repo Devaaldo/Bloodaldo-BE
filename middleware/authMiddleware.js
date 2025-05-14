@@ -1,40 +1,58 @@
-const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config/auth");
-const pool = require("../config/db");
+// middlewares/authMiddleware.js - Middleware untuk autentikasi
+const { verifyToken } = require("../config/auth");
 
-const authMiddleware = async (req, res, next) => {
+// Middleware untuk verifikasi token JWT
+const authenticateToken = (req, res, next) => {
 	try {
-		// Get token from header
+		// Ambil header authorization
 		const authHeader = req.headers.authorization;
 
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
-			return res
-				.status(401)
-				.json({ message: "No authentication token, authorization denied" });
+		if (!authHeader) {
+			return res.status(401).json({
+				success: false,
+				message: "Akses ditolak. Token tidak ditemukan.",
+			});
 		}
 
+		// Format header: "Bearer [token]"
 		const token = authHeader.split(" ")[1];
 
-		// Verify token
-		const decoded = jwt.verify(token, JWT_SECRET);
-
-		// Check if user exists
-		const [rows] = await pool.query(
-			"SELECT id, name, email, role FROM users WHERE id = ?",
-			[decoded.id]
-		);
-
-		if (rows.length === 0) {
-			return res.status(401).json({ message: "Token is not valid" });
+		if (!token) {
+			return res.status(401).json({
+				success: false,
+				message: "Akses ditolak. Format token tidak valid.",
+			});
 		}
 
-		// Add user to request object
-		req.user = rows[0];
+		// Verifikasi token
+		const decoded = verifyToken(token);
+		req.user = decoded;
+
 		next();
-	} catch (err) {
-		console.error("Auth middleware error:", err.message);
-		res.status(401).json({ message: "Token is not valid" });
+	} catch (error) {
+		return res.status(403).json({
+			success: false,
+			message: "Token tidak valid atau sudah kedaluwarsa.",
+		});
 	}
 };
 
-module.exports = authMiddleware;
+// Middleware untuk membatasi akses hanya untuk admin
+const adminOnly = (req, res, next) => {
+	if (!req.user || !req.user.id) {
+		return res.status(403).json({
+			success: false,
+			message: "Akses ditolak. Anda harus login sebagai admin.",
+		});
+	}
+
+	// Di sini bisa ditambahkan logika untuk memeriksa apakah user memiliki role admin
+	// Untuk sekarang, semua user yang terautentikasi dianggap sebagai admin
+
+	next();
+};
+
+module.exports = {
+	authenticateToken,
+	adminOnly,
+};

@@ -1,18 +1,23 @@
+// routes/reportRoutes.js - Route untuk laporan
 const express = require("express");
 const router = express.Router();
-const reportController = require("../controllers/reportController");
-const authMiddleware = require("../middleware/authMiddleware");
+const {
+	getStats,
+	exportToCsv,
+	exportToPdf,
+} = require("../controllers/reportController");
+const {
+	authenticateToken,
+	adminOnly,
+} = require("../middlewares/authMiddleware");
 
-// All routes require authentication
-router.use(authMiddleware);
+// Route publik untuk mendapatkan statistik
+router.get("/stats", getStats);
 
-// Generate and download report for a specific blood test
-router.get("/blood-test/:id", reportController.generateBloodTestReport);
+// Route terproteksi untuk ekspor CSV (admin only)
+router.get("/export-csv", authenticateToken, adminOnly, exportToCsv);
 
-// Generate and download report for a specific detection result
-router.get("/detection/:id", reportController.generateDetectionReport);
-
-// Generate and download user history report
-router.get("/history", reportController.generateHistoryReport);
+// Route terproteksi untuk ekspor PDF (admin only)
+router.get("/export-pdf", authenticateToken, adminOnly, exportToPdf);
 
 module.exports = router;

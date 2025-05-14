@@ -1,15 +1,20 @@
+// routes/authRoutes.js - Route untuk autentikasi
 const express = require("express");
 const router = express.Router();
-const authController = require("../controllers/authController");
-const authMiddleware = require("../middleware/authMiddleware");
+const {
+	login,
+	verifyUser,
+	changePassword,
+} = require("../controllers/authController");
+const { authenticateToken } = require("../middlewares/authMiddleware");
 
-// Register a new user
-router.post("/register", authController.register);
+// Route untuk login
+router.post("/login", login);
 
-// Login user
-router.post("/login", authController.login);
+// Route untuk verifikasi token
+router.get("/verify", authenticateToken, verifyUser);
 
-// Get current user (requires authentication)
-router.get("/me", authMiddleware, authController.getCurrentUser);
+// Route untuk mengubah password
+router.put("/change-password", authenticateToken, changePassword);
 
 module.exports = router;

@@ -1,342 +1,279 @@
+// utils/expertSystem.js - Implementasi sistem pakar untuk analisis data darah
 /**
- * Expert System for Blood Test Analysis
- * This implements a rule-based expert system to analyze blood test parameters
- * and detect possible diseases or conditions.
+ * Menganalisis data darah pasien dan menghasilkan diagnosa berdasarkan rule-based system
+ * @param {Object} patientData - Data pasien lengkap dengan parameter darah
+ * @returns {Object} Hasil analisis berupa diagnosa, probabilitas, penjelasan, dan rekomendasi
  */
+const analyzeBloodData = (patientData) => {
+	// Memastikan semua parameter yang dibutuhkan ada
+	const {
+		gender,
+		age,
+		hemoglobin,
+		redBloodCell,
+		whiteBloodCell,
+		platelet,
+		hematocrit,
+		mcv,
+		mch,
+		mchc,
+		neutrophils,
+		lymphocytes,
+		monocytes,
+		eosinophils,
+		basophils,
+	} = patientData;
 
-// Define normal ranges based on gender
-const getNormalRanges = (gender) => {
-	return {
+	// Definisi nilai normal untuk berbagai parameter darah
+	const normalRanges = {
 		hemoglobin:
-			gender === "male" ? { min: 13.5, max: 17.5 } : { min: 12.0, max: 15.5 },
-		hematocrit: gender === "male" ? { min: 41, max: 50 } : { min: 36, max: 44 },
-		erythrocytes:
-			gender === "male" ? { min: 4.7, max: 6.1 } : { min: 4.2, max: 5.4 },
-		leukocytes: { min: 4500, max: 11000 },
-		thrombocytes: { min: 150000, max: 450000 },
-		mcv: { min: 80, max: 96 },
-		mch: { min: 27, max: 33 },
-		mchc: { min: 33, max: 36 },
+			gender === "Laki-laki" ? { min: 14, max: 18 } : { min: 12, max: 16 },
+		redBloodCell:
+			gender === "Laki-laki" ? { min: 4.7, max: 6.1 } : { min: 4.2, max: 5.4 },
+		whiteBloodCell: { min: 4.5, max: 11 },
+		platelet: { min: 150, max: 450 },
+		hematocrit:
+			gender === "Laki-laki" ? { min: 41, max: 53 } : { min: 36, max: 46 },
+		mcv: { min: 80, max: 100 },
+		mch: { min: 27, max: 31 },
+		mchc: { min: 32, max: 36 },
+		neutrophils: { min: 40, max: 60 },
+		lymphocytes: { min: 20, max: 40 },
+		monocytes: { min: 2, max: 8 },
+		eosinophils: { min: 1, max: 4 },
+		basophils: { min: 0, max: 1 },
+	};
+
+	// Array untuk menyimpan hasil diagnosa
+	const results = [];
+
+	// Rule 1: Deteksi Anemia
+	if (hemoglobin < normalRanges.hemoglobin.min) {
+		const severity =
+			(normalRanges.hemoglobin.min - hemoglobin) / normalRanges.hemoglobin.min;
+		const probability = 0.7 + severity * 0.3; // Probabilitas antara 0.7-1.0 tergantung keparahan
+
+		results.push({
+			disease: "Anemia",
+			probability: parseFloat(probability.toFixed(2)),
+			explanation:
+				"Kadar hemoglobin yang rendah menunjukkan anemia, kondisi di mana tubuh tidak memiliki cukup sel darah merah sehat.",
+			recommendations: [
+				"Konsumsi makanan yang kaya zat besi seperti daging merah, bayam, dan kacang-kacangan",
+				"Konsultasikan dengan dokter untuk kemungkinan suplementasi zat besi",
+				"Lakukan pemeriksaan lebih lanjut untuk menentukan penyebab anemia",
+			],
+		});
+	}
+
+	// Rule 2: Deteksi Anemia Defisiensi Besi (Iron Deficiency Anemia)
+	if (
+		hemoglobin < normalRanges.hemoglobin.min &&
+		mcv < normalRanges.mcv.min &&
+		mch < normalRanges.mch.min
+	) {
+		results.push({
+			disease: "Anemia Defisiensi Besi",
+			probability: 0.85,
+			explanation:
+				"Kadar hemoglobin rendah dengan ukuran sel darah merah yang kecil (mikrositik) dan kandungan hemoglobin sel rendah menunjukkan anemia defisiensi besi.",
+			recommendations: [
+				"Konsumsi makanan kaya zat besi",
+				"Hindari konsumsi teh dan kopi bersamaan dengan makan, karena dapat menghambat penyerapan zat besi",
+				"Konsultasikan dengan dokter untuk suplementasi zat besi",
+				"Lakukan pemeriksaan untuk menentukan sumber kehilangan darah (jika ada)",
+			],
+		});
+	}
+
+	// Rule 3: Deteksi Anemia Megaloblastik (B12 atau Folat)
+	if (hemoglobin < normalRanges.hemoglobin.min && mcv > normalRanges.mcv.max) {
+		results.push({
+			disease: "Anemia Megaloblastik",
+			probability: 0.8,
+			explanation:
+				"Kadar hemoglobin rendah dengan ukuran sel darah merah yang besar (makrositik) menunjukkan anemia megaloblastik, sering disebabkan defisiensi vitamin B12 atau asam folat.",
+			recommendations: [
+				"Konsumsi makanan kaya vitamin B12 seperti daging, telur, produk susu",
+				"Konsumsi makanan kaya asam folat seperti sayuran hijau, kacang-kacangan",
+				"Konsultasikan dengan dokter untuk suplementasi B12 atau asam folat",
+				"Lakukan pemeriksaan lanjutan untuk menentukan penyebab pasti",
+			],
+		});
+	}
+
+	// Rule 4: Deteksi Infeksi atau Peradangan
+	if (whiteBloodCell > normalRanges.whiteBloodCell.max) {
+		const severity =
+			(whiteBloodCell - normalRanges.whiteBloodCell.max) /
+			normalRanges.whiteBloodCell.max;
+		const probability = 0.65 + severity * 0.3; // Probabilitas antara 0.65-0.95
+
+		results.push({
+			disease: "Infeksi atau Peradangan",
+			probability: parseFloat(probability.toFixed(2)),
+			explanation:
+				"Peningkatan sel darah putih (leukositosis) menunjukkan kemungkinan adanya infeksi atau proses peradangan dalam tubuh.",
+			recommendations: [
+				"Istirahat yang cukup",
+				"Konsumsi cairan yang cukup",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+				"Hindari aktivitas berat sampai kondisi membaik",
+			],
+		});
+	}
+
+	// Rule 5: Deteksi Leukopenia (Penurunan Sel Darah Putih)
+	if (whiteBloodCell < normalRanges.whiteBloodCell.min) {
+		results.push({
+			disease: "Leukopenia",
+			probability: 0.75,
+			explanation:
+				"Penurunan jumlah sel darah putih dapat mengurangi kemampuan tubuh untuk melawan infeksi.",
+			recommendations: [
+				"Hindari kontak dengan orang yang sedang sakit",
+				"Jaga kebersihan diri dan lingkungan",
+				"Konsumsi makanan bergizi seimbang",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+			],
+		});
+	}
+
+	// Rule 6: Deteksi Trombositopenia (Kekurangan Trombosit)
+	if (platelet < normalRanges.platelet.min) {
+		const severity =
+			(normalRanges.platelet.min - platelet) / normalRanges.platelet.min;
+		const probability = 0.7 + severity * 0.25; // Probabilitas antara 0.7-0.95
+
+		results.push({
+			disease: "Trombositopenia",
+			probability: parseFloat(probability.toFixed(2)),
+			explanation:
+				"Jumlah trombosit yang rendah dapat menyebabkan gangguan pembekuan darah dan meningkatkan risiko perdarahan.",
+			recommendations: [
+				"Hindari penggunaan obat pengencer darah seperti aspirin",
+				"Hindari aktivitas yang berisiko cedera fisik",
+				"Perhatikan tanda-tanda perdarahan seperti memar yang mudah terjadi, mimisan, atau gusi berdarah",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+			],
+		});
+	}
+
+	// Rule 7: Deteksi Trombositosis (Kelebihan Trombosit)
+	if (platelet > normalRanges.platelet.max) {
+		results.push({
+			disease: "Trombositosis",
+			probability: 0.7,
+			explanation:
+				"Peningkatan jumlah trombosit dapat meningkatkan risiko pembekuan darah yang tidak normal.",
+			recommendations: [
+				"Konsumsi air putih yang cukup",
+				"Hindari merokok dan minuman beralkohol",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+				"Hindari penggunaan kontrasepsi hormonal (untuk wanita) tanpa konsultasi dokter",
+			],
+		});
+	}
+
+	// Rule 8: Deteksi Polisitemia (Kelebihan Sel Darah Merah)
+	if (
+		redBloodCell > normalRanges.redBloodCell.max &&
+		hemoglobin > normalRanges.hemoglobin.max &&
+		hematocrit > normalRanges.hematocrit.max
+	) {
+		results.push({
+			disease: "Polisitemia",
+			probability: 0.8,
+			explanation:
+				"Peningkatan sel darah merah, hemoglobin, dan hematokrit menunjukkan polisitemia, kondisi di mana tubuh memproduksi terlalu banyak sel darah merah.",
+			recommendations: [
+				"Hindari merokok dan minuman beralkohol",
+				"Konsumsi air putih yang cukup",
+				"Hindari aktivitas di ketinggian tinggi tanpa aklimatisasi yang tepat",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+			],
+		});
+	}
+
+	// Rule 9: Deteksi Neutrofilia (Peningkatan Neutrofil)
+	if (neutrophils > normalRanges.neutrophils.max) {
+		results.push({
+			disease: "Neutrofilia",
+			probability: 0.7,
+			explanation:
+				"Peningkatan persentase neutrofil sering menunjukkan adanya infeksi bakteri akut atau peradangan.",
+			recommendations: [
+				"Istirahat yang cukup",
+				"Konsumsi cairan yang cukup",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+				"Hindari aktivitas berat sampai kondisi membaik",
+			],
+		});
+	}
+
+	// Rule 10: Deteksi Limfositosis (Peningkatan Limfosit)
+	if (lymphocytes > normalRanges.lymphocytes.max) {
+		results.push({
+			disease: "Limfositosis",
+			probability: 0.65,
+			explanation:
+				"Peningkatan persentase limfosit sering menunjukkan adanya infeksi virus atau kondisi autoimun.",
+			recommendations: [
+				"Istirahat yang cukup",
+				"Konsumsi cairan yang cukup",
+				"Hindari kontak dengan orang yang sedang sakit",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+			],
+		});
+	}
+
+	// Rule 11: Deteksi Eosinofilia (Peningkatan Eosinofil)
+	if (eosinophils > normalRanges.eosinophils.max) {
+		results.push({
+			disease: "Eosinofilia",
+			probability: 0.7,
+			explanation:
+				"Peningkatan jumlah eosinofil sering terkait dengan kondisi alergi, infeksi parasit, atau kondisi autoimun.",
+			recommendations: [
+				"Hindari alergen yang diketahui",
+				"Jaga kebersihan lingkungan untuk mengurangi paparan alergen",
+				"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
+				"Perhatikan gejala alergi seperti ruam, gatal, atau kesulitan bernapas",
+			],
+		});
+	}
+
+	// Jika tidak ada masalah terdeteksi, dianggap normal
+	if (results.length === 0) {
+		return {
+			diagnosis: "Normal",
+			mainProbability: 0.9,
+			explanation: "Semua parameter darah berada dalam rentang normal.",
+			recommendations: [
+				"Pertahankan pola hidup sehat dengan diet seimbang",
+				"Lakukan aktivitas fisik secara teratur",
+				"Lakukan pemeriksaan darah rutin setahun sekali",
+				"Jaga hidrasi dengan minum air yang cukup",
+			],
+			probabilities: [{ disease: "Normal", probability: 0.9 }],
+		};
+	}
+
+	// Urutkan hasil berdasarkan probabilitas tertinggi
+	results.sort((a, b) => b.probability - a.probability);
+
+	// Ambil diagnosa utama (dengan probabilitas tertinggi)
+	const mainDiagnosis = results[0];
+
+	return {
+		diagnosis: mainDiagnosis.disease,
+		mainProbability: mainDiagnosis.probability,
+		explanation: mainDiagnosis.explanation,
+		recommendations: mainDiagnosis.recommendations,
+		probabilities: results,
 	};
 };
 
-// Analyze blood test parameters and identify abnormal values
-const identifyAbnormalParameters = (parameters, normalRanges) => {
-	const abnormalParameters = {};
-
-	Object.entries(parameters).forEach(([key, value]) => {
-		// Skip null, undefined, or NaN values
-		if (
-			normalRanges[key] &&
-			value !== null &&
-			value !== undefined &&
-			!isNaN(value)
-		) {
-			// Convert value to float to ensure proper comparison
-			const numValue = parseFloat(value);
-
-			if (numValue < normalRanges[key].min) {
-				abnormalParameters[key] = {
-					value: numValue,
-					status: "low",
-					normalRange: `${normalRanges[key].min} - ${normalRanges[key].max}`,
-				};
-			} else if (numValue > normalRanges[key].max) {
-				abnormalParameters[key] = {
-					value: numValue,
-					status: "high",
-					normalRange: `${normalRanges[key].min} - ${normalRanges[key].max}`,
-				};
-			}
-		}
-	});
-
-	return abnormalParameters;
-};
-
-// Apply rules to identify possible conditions
-const applyRules = (abnormalParameters, patientData) => {
-	const possibleConditions = [];
-
-	// Rule 1: Anemia (low hemoglobin)
-	if (
-		abnormalParameters.hemoglobin &&
-		abnormalParameters.hemoglobin.status === "low"
-	) {
-		// Check MCV to determine type of anemia
-		if (abnormalParameters.mcv && abnormalParameters.mcv.status === "low") {
-			possibleConditions.push({
-				name: "Anemia Mikrositik",
-				description:
-					"Anemia dengan sel darah merah yang lebih kecil dari normal.",
-				probability: "Tinggi",
-				recommendations: [
-					"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
-					"Tes kadar ferritin dan besi untuk memeriksa anemia defisiensi besi",
-					"Pertimbangkan suplemen besi jika direkomendasikan oleh dokter",
-				],
-			});
-		} else if (
-			abnormalParameters.mcv &&
-			abnormalParameters.mcv.status === "high"
-		) {
-			possibleConditions.push({
-				name: "Anemia Makrositik",
-				description:
-					"Anemia dengan sel darah merah yang lebih besar dari normal, sering dikaitkan dengan defisiensi vitamin B12 atau asam folat.",
-				probability: "Tinggi",
-				recommendations: [
-					"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
-					"Tes kadar vitamin B12 dan asam folat",
-					"Evaluasi fungsi tiroid",
-				],
-			});
-		} else {
-			possibleConditions.push({
-				name: "Anemia Normositik",
-				description:
-					"Anemia dengan ukuran sel darah merah normal, bisa disebabkan oleh penyakit kronis atau kehilangan darah.",
-				probability: "Sedang",
-				recommendations: [
-					"Konsultasikan dengan dokter untuk evaluasi lebih lanjut",
-					"Periksa adanya sumber perdarahan",
-					"Evaluasi fungsi ginjal dan hati",
-				],
-			});
-		}
-	}
-
-	// Rule 2: Polycythemia (high hemoglobin and hematocrit)
-	if (
-		abnormalParameters.hemoglobin &&
-		abnormalParameters.hemoglobin.status === "high" &&
-		abnormalParameters.hematocrit &&
-		abnormalParameters.hematocrit.status === "high"
-	) {
-		possibleConditions.push({
-			name: "Polisitemia",
-			description:
-				"Kondisi dimana tubuh memproduksi terlalu banyak sel darah merah, menyebabkan darah menjadi lebih kental.",
-			probability: "Tinggi",
-			recommendations: [
-				"Segera konsultasikan dengan hematologis",
-				"Pertimbangkan tes JAK2 untuk polisitemia vera",
-				"Evaluasi saturasi oksigen untuk memeriksa penyebab sekunder",
-			],
-		});
-	}
-
-	// Rule 3: Leukocytosis (high white blood cells)
-	if (
-		abnormalParameters.leukocytes &&
-		abnormalParameters.leukocytes.status === "high"
-	) {
-		possibleConditions.push({
-			name: "Leukositosis",
-			description:
-				"Peningkatan jumlah sel darah putih, sering kali mengindikasikan infeksi atau peradangan.",
-			probability: "Tinggi",
-			recommendations: [
-				"Evaluasi adanya sumber infeksi",
-				"Pemeriksaan diferensial leukosit",
-				"Pertimbangkan tes CRP atau laju endap darah",
-			],
-		});
-	}
-
-	// Rule 4: Leukopenia (low white blood cells)
-	if (
-		abnormalParameters.leukocytes &&
-		abnormalParameters.leukocytes.status === "low"
-	) {
-		possibleConditions.push({
-			name: "Leukopenia",
-			description:
-				"Penurunan jumlah sel darah putih, bisa mengindikasikan masalah dengan sumsum tulang atau autoimun.",
-			probability: "Tinggi",
-			recommendations: [
-				"Konsultasikan dengan hematologis",
-				"Evaluasi riwayat obat-obatan",
-				"Tes autoimun sesuai rekomendasi dokter",
-			],
-		});
-	}
-
-	// Rule 5: Thrombocytopenia (low platelets)
-	if (
-		abnormalParameters.thrombocytes &&
-		abnormalParameters.thrombocytes.status === "low"
-	) {
-		possibleConditions.push({
-			name: "Trombositopenia",
-			description:
-				"Penurunan jumlah trombosit/keping darah, yang bisa meningkatkan risiko perdarahan.",
-			probability: "Tinggi",
-			recommendations: [
-				"Pantau tanda-tanda perdarahan",
-				"Konsultasikan dengan hematologis",
-				"Evaluasi kemungkinan penyebab seperti obat-obatan atau infeksi",
-			],
-		});
-	}
-
-	// Rule 6: Thrombocytosis (high platelets)
-	if (
-		abnormalParameters.thrombocytes &&
-		abnormalParameters.thrombocytes.status === "high"
-	) {
-		possibleConditions.push({
-			name: "Trombositosis",
-			description:
-				"Peningkatan jumlah trombosit/keping darah, bisa reaktif atau disebabkan oleh gangguan sumsum tulang.",
-			probability: "Sedang",
-			recommendations: [
-				"Evaluasi penyebab peradangan atau infeksi",
-				"Pertimbangkan pemeriksaan sumsum tulang jika persisten",
-				"Pantau untuk gejala pembekuan darah",
-			],
-		});
-	}
-
-	// If no conditions detected but abnormal parameters exist
-	if (
-		possibleConditions.length === 0 &&
-		Object.keys(abnormalParameters).length > 0
-	) {
-		possibleConditions.push({
-			name: "Abnormalitas Darah Non-spesifik",
-			description:
-				"Parameter darah abnormal terdeteksi tetapi tidak cocok dengan pola penyakit spesifik.",
-			probability: "Rendah",
-			recommendations: [
-				"Ulangi tes dalam 2-4 minggu untuk konfirmasi",
-				"Konsultasikan dengan dokter jika gejala muncul",
-				"Pertimbangkan evaluasi lebih lanjut jika hasil tetap abnormal",
-			],
-		});
-	}
-
-	// If all parameters are normal
-	if (Object.keys(abnormalParameters).length === 0) {
-		possibleConditions.push({
-			name: "Hasil Normal",
-			description: "Semua parameter darah berada dalam rentang normal.",
-			probability: "Tinggi",
-			recommendations: [
-				"Lanjutkan pemeriksaan rutin sesuai rekomendasi dokter",
-				"Pertahankan gaya hidup sehat",
-				"Lakukan tes ulang dalam 6-12 bulan",
-			],
-		});
-	}
-
-	return possibleConditions;
-};
-
-// Main function to analyze blood test data
-exports.analyzeBloodTest = (bloodTest) => {
-	try {
-		// Validasi input data
-		if (!bloodTest) {
-			throw new Error("Blood test data is missing");
-		}
-
-		console.log(
-			"Received blood test data:",
-			JSON.stringify(bloodTest, null, 2)
-		);
-
-		// Extract parameters from blood test with safety checks
-		const parameters = {
-			hemoglobin:
-				bloodTest.hemoglobin !== undefined
-					? parseFloat(bloodTest.hemoglobin)
-					: null,
-			hematocrit:
-				bloodTest.hematocrit !== undefined
-					? parseFloat(bloodTest.hematocrit)
-					: null,
-			erythrocytes:
-				bloodTest.erythrocytes !== undefined
-					? parseFloat(bloodTest.erythrocytes)
-					: null,
-			leukocytes:
-				bloodTest.leukocytes !== undefined
-					? parseFloat(bloodTest.leukocytes)
-					: null,
-			thrombocytes:
-				bloodTest.thrombocytes !== undefined
-					? parseFloat(bloodTest.thrombocytes)
-					: null,
-			mcv: bloodTest.mcv !== undefined ? parseFloat(bloodTest.mcv) : null,
-			mch: bloodTest.mch !== undefined ? parseFloat(bloodTest.mch) : null,
-			mchc: bloodTest.mchc !== undefined ? parseFloat(bloodTest.mchc) : null,
-		};
-
-		console.log("Processed parameters:", parameters);
-
-		// Default gender and age if missing
-		const patientData = {
-			gender: bloodTest.patient_gender || "male",
-			age: bloodTest.patient_age ? parseInt(bloodTest.patient_age) : 30,
-		};
-
-		console.log("Patient data:", patientData);
-
-		// Get normal ranges based on gender
-		const normalRanges = getNormalRanges(patientData.gender);
-
-		// Identify abnormal parameters
-		const abnormalParameters = identifyAbnormalParameters(
-			parameters,
-			normalRanges
-		);
-		console.log("Abnormal parameters:", abnormalParameters);
-
-		// Apply rules to identify possible conditions
-		const possibleConditions = applyRules(abnormalParameters, patientData);
-		console.log("Possible conditions:", possibleConditions);
-
-		// Return detection result
-		return {
-			testId: bloodTest.id,
-			patientName: bloodTest.patient_name || "Unknown",
-			patientAge: patientData.age,
-			patientGender: patientData.gender,
-			detectionDate: new Date().toLocaleDateString("id-ID", {
-				day: "numeric",
-				month: "long",
-				year: "numeric",
-			}),
-			abnormalParameters,
-			possibleConditions,
-		};
-	} catch (error) {
-		console.error("Expert system error:", error);
-		// Return a safe default result
-		return {
-			testId: bloodTest?.id || 0,
-			patientName: bloodTest?.patient_name || "Unknown",
-			patientAge: bloodTest?.patient_age || 0,
-			patientGender: bloodTest?.patient_gender || "unknown",
-			detectionDate: new Date().toLocaleDateString("id-ID", {
-				day: "numeric",
-				month: "long",
-				year: "numeric",
-			}),
-			abnormalParameters: {},
-			possibleConditions: [
-				{
-					name: "Error Analisis",
-					description:
-						"Terjadi kesalahan saat menganalisis data: " + error.message,
-					probability: "Rendah",
-					recommendations: [
-						"Coba lagi dengan data yang valid",
-						"Hubungi administrator sistem",
-					],
-				},
-			],
-		};
-	}
+module.exports = {
+	analyzeBloodData,
 };
