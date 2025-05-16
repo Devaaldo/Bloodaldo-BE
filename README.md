@@ -1,7 +1,5 @@
 # Bloodaldo Backend
 
-![Bloodaldo Logo](public/logo.png)
-
 ## 📋 Deskripsi Proyek
 
 Backend untuk aplikasi Bloodaldo, sistem pakar untuk deteksi dini penyakit melalui analisis data bank darah. API ini menyediakan endpoints untuk manajemen data pasien, analisis darah, autentikasi, dan ekspor data.
