@@ -1,4 +1,4 @@
-# Bloodaldo Backend
+# Bloodaldo Backend - Sistem Pakar untuk Deteksi Dini Penyakit melalui Data Bank Darah
 
 ## 📋 Deskripsi Proyek
 
