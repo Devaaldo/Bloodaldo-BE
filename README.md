@@ -114,7 +114,6 @@ bloodaldo-backend/
 ├── .eslintrc.js
 ├── .gitignore
 ├── package.json
-├── README.md
 └── server.js
 ```
 
